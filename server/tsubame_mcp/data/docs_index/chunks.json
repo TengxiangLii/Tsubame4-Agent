@@ -1,0 +1,68 @@
+[
+  {
+    "breadcrumb": "TSUBAME4.0",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "An original, plain-language orientation to the TSUBAME4.0 system at Institute of\nScience Tokyo, written for users who drive it through Tsubame4Agent. It records\nthe site-specific facts that shape how you ask for work — not general HPC/Linux\nbackground, and not a command reference. Stable facts (resource-type shapes,\npaths, conventions) are stated here so the agent can size a job without a\nround-trip; genuinely changing values (queue occupancy, your point balance,\nexact installed versions) are left to the live system, which the agent queries\non demand.",
+    "id": 0
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > What TSUBAME4 is",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "TSUBAME4 is a GPU-first supercomputer scheduled with Altair Grid Engine and\nreached through shared login nodes. It is 240 identical nodes, and every node\ncarries **four NVIDIA H100 GPUs** alongside two 96-core AMD EPYC (Genoa) CPUs and\n768 GiB of memory. There is no separate \"CPU cluster\" and \"GPU cluster\": the same\nGPU-equipped nodes are logically sliced into the resource types you request.\n\nThe practical consequence for working with the agent: think in whole GPU nodes\nfirst. The default job takes a full node (`node_f`, 192 cores + 4 H100); ask for\na smaller slice or a CPU-only slice only when a workload genuinely needs less.",
+    "id": 1
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > Getting on the system",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "You connect over SSH to `login.t4.gsic.titech.ac.jp`, load-balanced across the\nlogin nodes. Authentication is by SSH key only — no passwords — so register your\npublic key through the web portal before your first login. Login nodes are shared\nand strictly for editing, building, staging files, and submitting: anything that\nruns in parallel, uses real memory, or lasts more than a few minutes belongs in a\njob. Have the agent submit it rather than running it on the front end.",
+    "id": 2
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > Sizing a job: resource types",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "This is the central TSUBAME4 idea and where it differs most from other clusters.\nYou do not ask for \"N nodes and M cores\"; you ask for a number of **resource-type\nunits**, and each type is a fixed slice of a node:\n\n| resource type | CPU cores | memory | GPUs | for |\n|---|---|---|---|---|\n| `node_f` (default) | 192 | 768 GB | 4 | full-node and multi-GPU / MPI+GPU work |\n| `node_h` | 96 | 384 GB | 2 | half a node |\n| `node_q` | 48 | 192 GB | 1 | a quarter node |\n| `node_o` | 24 | 96 GB | ½ (MIG) | an eighth node |\n| `gpu_1` | 8 | 96 GB | 1 | a single-GPU job with modest CPU |\n| `gpu_h` | 4 | 48 GB | ½ (MIG) | a fractional-GPU job |\n| `cpu_4` … `cpu_160` | 4 … 160 | proportional | 0 | CPU-only work |\n\nYou request, for example, two full nodes as `node_f=2`. A job uses one resource\ntype only — you cannot mix `node_f` and `gpu_1` in a single job. Every job also\nneeds a maximum run time (`h_rt`), which caps at 24 hours. The agent turns your\ndescription into the right `-l` request.",
+    "id": 3
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > Groups, points, and the trial run",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "Compute is billed in **TSUBAME points** to a *group*, named at submission with\n`-g <group>`. The agent can hold a default group and let you override it per job.\nEach group has a point balance that jobs draw down as they run; when it is\nexhausted the group's jobs stop starting. The balance changes continuously — ask\nthe agent to read it live (`t4-user-info group point`) rather than assuming it.\nHigher priority (`-3`/`-4` instead of the default `-5`) spends points faster.\n\nThere is one important free path: a **trial run**. Submit with *no* group and the\njob runs without charge, limited to 2 resource-type units, 3 minutes, and lowest\npriority. It is meant for checking that a program launches — not for real\nscience — and it is what the agent uses for a smoke test.",
+    "id": 4
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > Software, compilers, and MPI",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "Software is provided through environment modules. Because versions change, have\nthe agent list what is installed live rather than relying on a frozen list — but\na few stable conventions matter when building and launching:\n\n- **GPU work loads CUDA.** `module load cuda` (and/or the `nvhpc` NVIDIA HPC SDK)\n  provides the GPU toolchain; build and run with the same modules.\n- **Intel oneAPI is the primary CPU toolchain.** Loading `intel` brings the Intel\n  compilers, MKL, and Intel MPI together; the EPYC (Zen4) cores support AVX-512.\n- **Launch MPI with the matching launcher.** Intel MPI uses\n  `mpiexec.hydra -ppn <ranks-per-node> -n <total>`; Open MPI\n  (`module load openmpi/5.0.7-intel`) uses\n  `mpirun -npernode <ranks-per-node> -n <total> -x LD_LIBRARY_PATH`. The assigned\n  node list is in `$PE_HOSTFILE`.\n- **Threaded code must be told its thread count** (`OMP_NUM_THREADS`), matched to\n  the cores per process, or it runs with the wrong number and far slower.\n- **`module purge` before `module load`** in a job that inherits the environment\n  (`-V`), and remember that `LD_LIBRARY_PATH`/`LD_PRELOAD` are *not* forwarded —\n  set them inside the script.\n\nMajor preinstalled applications include Gaussian, VASP, AMBER, ANSYS, ABAQUS,\nCOMSOL, Schrodinger, MATLAB, and Materials Studio — confirm availability and\nversion live, since the catalogue evolves.",
+    "id": 5
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > Storage",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "Several places to keep data, each with a purpose:\n\n- `/home/<group>/<user>` — code, scripts, small files; a tight ~25 GiB quota.\n- `/work/<group>/<user>` — your everyday work area, ~100 GiB, no application\n  needed; it is your home path with `home` replaced by `work`.\n- `/gs/fs` and `/gs/bs` — group disks (high-speed SSD and large-scale HDD Lustre)\n  purchased per group for shared datasets and results.\n- `/local` — node-local NVMe scratch that exists only for a job's duration; stage\n  inputs onto it for I/O-heavy stages and copy results back out before the job\n  ends, because it is wiped when the job releases the node.\n\nThe agent can report your current usage and quota (`t4-user-info disk …`) on\nrequest.",
+    "id": 6
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > Containers",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "Apptainer (Singularity) is available when you want to carry a specific software\nstack onto the machine. Pull a ready-made image or build your own, then have the\nagent run your program inside it; site storage (`/gs`, `/apps`, `/home`) is\nbind-mounted and, for a GPU resource type, container GPU access (`--nv`) is\nenabled automatically.",
+    "id": 7
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > Running work through the agent",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "You describe a job in resource terms — which resource type and how many units,\nhow long, which group to charge, and (for parallel work) the MPI ranks and\nthreads — and the agent assembles and submits the Grid Engine job, then returns a\njob ID to track. You do not write `#$` job scripts or recall scheduler flags\nyourself. Most jobs are single- or multi-GPU; MPI+GPU across several `node_f`\nunits is common for large runs.",
+    "id": 8
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > Following jobs and untangling failures",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "After submission, a job's queue position and state come from `qstat`; once it\nfinishes it leaves `qstat` and its record moves to `qacct` (which the agent reads\nfor exit status and timing). A job's console output is written next to where it\nwas launched, as `<jobname>.o<jobid>` (standard output) and `<jobname>.e<jobid>`\n(standard error) — the agent can read and summarize these.\n\nWhen a job misbehaves, the cause is usually one of a few:\n\n- The group ran out of TSUBAME points, or no group was named.\n- The requested resource type was wrong for the workload (too little memory, or a\n  CPU-only type for GPU code).\n- It hit its `h_rt` wall-time limit.\n- `OMP_NUM_THREADS` was left unset, so threaded performance collapsed.\n- The wrong modules were loaded, or GPU code ran without `module load cuda`.\n\nThe agent can inspect the failed job's record and output to point at which it was.",
+    "id": 9
+  },
+  {
+    "breadcrumb": "TSUBAME4.0 > Staying current",
+    "url": "https://www.t4.cii.isct.ac.jp/en/",
+    "text": "TSUBAME4 evolves — installed software, limits, and policies change. The\nauthoritative sources are the portal (https://www.t4.cii.isct.ac.jp/en/) and the\nlive state of the machine, which the agent can query whenever a precise, current\nanswer matters. For anything not covered here — especially accounts, points, and\npolicy — fall back to those or to TSUBAME support.",
+    "id": 10
+  }
+]

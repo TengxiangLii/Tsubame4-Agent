@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tsubame-mcp"
+version = "0.1.0"
+description = "MCP servers for the Institute of Science Tokyo TSUBAME4.0 supercomputer: Grid Engine interaction and documentation search."
+requires-python = ">=3.10"
+dependencies = [
+    "mcp",
+    "remotemanager",
+    "httpx",
+    "numpy",
+]
+
+[project.scripts]
+tsubame-hpc-mcp = "tsubame_mcp.hpc_server:main"
+tsubame-docs-mcp = "tsubame_mcp.docs_server:main"
+tsubame-doctor = "tsubame_mcp.doctor:main"
+
+[tool.setuptools.packages.find]
+include = ["tsubame_mcp*"]
+
+[tool.setuptools.package-data]
+tsubame_mcp = [
+    "data/*.json",
+    "data/*.md",
+    "data/docs_index/*",
+]

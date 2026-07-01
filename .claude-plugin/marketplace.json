@@ -1,0 +1,14 @@
+{
+  "name": "tsubame-marketplace",
+  "owner": {
+    "name": "TengxiangLii",
+    "email": "li.t.ab30@m.isct.ac.jp"
+  },
+  "plugins": [
+    {
+      "name": "tsubame",
+      "source": "./plugins/tsubame",
+      "description": "Grid Engine job management and documentation search for the Institute of Science Tokyo TSUBAME4.0 supercomputer."
+    }
+  ]
+}

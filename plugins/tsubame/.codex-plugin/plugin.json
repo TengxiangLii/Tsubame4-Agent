@@ -1,0 +1,26 @@
+{
+  "name": "tsubame",
+  "version": "0.1.0",
+  "description": "Interact with the Institute of Science Tokyo TSUBAME4.0 supercomputer: submit and monitor Grid Engine jobs, manage files on the cluster, and search the built-in TSUBAME4 guide.",
+  "author": {
+    "name": "TengxiangLii",
+    "email": "li.t.ab30@m.isct.ac.jp"
+  },
+  "repository": "https://github.com/TengxiangLii/Tsubame4-Agent",
+  "keywords": ["hpc", "grid-engine", "tsubame", "isct", "gpu", "h100", "supercomputer"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "TSUBAME4",
+    "shortDescription": "Submit and monitor TSUBAME4 Grid Engine jobs and search TSUBAME4 docs.",
+    "longDescription": "Interact with the Institute of Science Tokyo TSUBAME4.0 supercomputer from Codex: submit and monitor Grid Engine (GPU) jobs, manage files on the cluster, and search the built-in TSUBAME4 guide.",
+    "developerName": "Institute of Science Tokyo",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Show TSUBAME4 cluster status.",
+      "Submit a TSUBAME4 trial-run test job.",
+      "Search the TSUBAME4 guide."
+    ]
+  }
+}

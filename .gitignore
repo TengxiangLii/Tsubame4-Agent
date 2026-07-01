@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.venv/
+server/.venv/
+*.egg-info/
+build/
+.DS_Store
+*.swp
+remotemanager.log
+.claude/settings.local.json
+# Copyrighted vendor manuals are not committed; the docs index is built from our
+# own data/tsubame_guide.md instead — see AGENTS.md.
+*.pdf
+# Third-party IRI spec (ALCF, no redistribution license) — fetch when needed (see AGENTS.md)
+openapi.json
+
+# Upstream RIKEN reference clone (separate repo) — not part of this project
+Hokusai-Agent/
+server/uv.lock

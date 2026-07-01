@@ -1,0 +1,95 @@
+{
+  "cluster": "TSUBAME4.0",
+  "operator": "TSUBAME Computing Services, Center for Information Infrastructure, Institute of Science Tokyo",
+  "login_host": "login.t4.gsic.titech.ac.jp (DNS round-robin to login1/login2)",
+  "portal": "https://www.t4.cii.isct.ac.jp/en/",
+  "scheduler": "Altair Grid Engine",
+  "architecture": "x86_64 (AMD EPYC 9654 Genoa) + NVIDIA H100 GPUs",
+  "peak_performance": "66.8 PFLOPS FP64, 952 PFLOPS FP16",
+  "node": {
+    "count": 240,
+    "model": "HPE Cray XD665",
+    "cpu": "AMD EPYC 9654 (96 cores / 192 threads, 2.4 GHz) x 2 sockets = 192 cores/node",
+    "memory_per_node_gib": 768,
+    "memory_type": "DDR5-4800",
+    "gpu": "4x NVIDIA H100 SXM5 94GB HBM2e per node",
+    "local_ssd": "1.92 TB NVMe U.2 SSD per node",
+    "interconnect": "InfiniBand NDR200 200Gbps x 4 (fat tree)",
+    "os": "Red Hat Enterprise Linux 9.3"
+  },
+  "notes": [
+    "TSUBAME4 is a GPU-first system: every one of the 240 compute nodes carries 4x NVIDIA H100. The default and typical job takes whole GPU nodes (resource type node_f).",
+    "Jobs are sized by RESOURCE TYPE, not nodes/cores: request '-l <resource_type>=<N>' (e.g. '-l node_f=2'). Each resource type fixes cores, memory, GPUs, and local scratch. Different resource types cannot be combined in one job.",
+    "Every job needs a maximum run time '-l h_rt=HH:MM:SS' (max 24 hours) and a resource type. Both are required.",
+    "Jobs are billed in TSUBAME points to a group via the qsub '-g <group>' argument. Check points with 't4-user-info group point -g <group>'.",
+    "TRIAL RUN: submitting with NO '-g' runs a free trial job, limited to 2 resource-type units, 3 minutes, priority -5. Ideal for testing that a program launches.",
+    "Priority (qsub -p) is -5 (standard, default), -4 (higher), or -3 (highest); -4/-3 consume points at a higher rate. Always a negative number.",
+    "GPU compute mode can be set per job with '#$ -v GPU_COMPUTE_MODE=<0|1|2>' on node_f/node_h/node_q/gpu_1 (0 DEFAULT, 1 EXCLUSIVE_PROCESS, 2 PROHIBITED). MIG is used on node_o and gpu_h.",
+    "Software is provided through Environment Modules (module avail/load/purge). Load the same modules in the job script as used to build. With qsub -V, run 'module purge' before 'module load'.",
+    "GPU builds: 'module load cuda' and/or 'module load nvhpc'. Intel oneAPI ('module load intel') provides the Intel compilers, MKL, and Intel MPI.",
+    "MPI: Intel MPI launches with 'mpiexec.hydra -ppn <ranks/node> -n <total>'; OpenMPI ('module load openmpi/5.0.7-intel') launches with 'mpirun -npernode <ranks/node> -n <total> -x LD_LIBRARY_PATH'. The assigned node list is in $PE_HOSTFILE.",
+    "Threaded code: set OMP_NUM_THREADS to the cores per process; hyper-threading is enabled (up to 192 threads/node on node_f).",
+    "LD_LIBRARY_PATH and LD_PRELOAD are NOT forwarded by qsub -V (a TSUBAME-specific restriction) — set them inside the job script.",
+    "Login nodes are shared: no heavy computation, no parallel/long (>10 min) programs, no ISV/freeware runs, no server processes. Use jobs (qsub) or interactive jobs (qrsh)."
+  ],
+  "resource_types": [
+    {"name": "node_f",  "cores": 192, "memory_gb": 768, "gpus": 4,   "local_scratch_gib": 1660, "default": true},
+    {"name": "node_h",  "cores": 96,  "memory_gb": 384, "gpus": 2,   "local_scratch_gib": 830},
+    {"name": "node_q",  "cores": 48,  "memory_gb": 192, "gpus": 1,   "local_scratch_gib": 415},
+    {"name": "node_o",  "cores": 24,  "memory_gb": 96,  "gpus": 0.5, "local_scratch_gib": 200, "mig": true},
+    {"name": "gpu_1",   "cores": 8,   "memory_gb": 96,  "gpus": 1,   "local_scratch_gib": 200},
+    {"name": "gpu_h",   "cores": 4,   "memory_gb": 48,  "gpus": 0.5, "local_scratch_gib": 100, "mig": true},
+    {"name": "cpu_160", "cores": 160, "memory_gb": 368, "gpus": 0,   "local_scratch_gib": 830},
+    {"name": "cpu_80",  "cores": 80,  "memory_gb": 184, "gpus": 0,   "local_scratch_gib": 415},
+    {"name": "cpu_40",  "cores": 40,  "memory_gb": 92,  "gpus": 0,   "local_scratch_gib": 200},
+    {"name": "cpu_16",  "cores": 16,  "memory_gb": 36.8, "gpus": 0,  "local_scratch_gib": 83},
+    {"name": "cpu_8",   "cores": 8,   "memory_gb": 18.4, "gpus": 0,  "local_scratch_gib": 40},
+    {"name": "cpu_4",   "cores": 4,   "memory_gb": 9.2,  "gpus": 0,  "local_scratch_gib": 20}
+  ],
+  "max_wall_time": "24:00:00",
+  "queues": {
+    "normal": "Batch jobs via qsub and interactive jobs via qrsh; resource type selectable. The usual path.",
+    "interactive": "Shared interactive job queue via iqrsh (24 cores, 96 GB, 1 MIG shared by up to 12 users); free for intramural (tgz-edu) / access-card users. For debuggers, visualizers, Jupyter Lab.",
+    "subscription": "qsub -q prior — compute-node subscription job (waits at most one hour)."
+  },
+  "modules": {
+    "intel": "Intel oneAPI (ifx/icx/icpx, former ifort/icc/icpc; MKL; loads Intel MPI)",
+    "intel-mpi": "Intel MPI Library (mpiexec.hydra)",
+    "nvhpc": "NVIDIA HPC SDK (nvc/nvfortran, CUDA-aware)",
+    "cuda": "NVIDIA CUDA Toolkit (nvcc)",
+    "aocc": "AMD Optimizing C/C++ Compiler",
+    "openmpi/5.0.7-intel": "Open MPI built with Intel compilers (mpirun)",
+    "openmpi/5.0.7-gcc": "Open MPI built with GCC",
+    "openmpi/5.0.7-nvhpc": "Open MPI built with NVIDIA HPC SDK (CUDA-aware)"
+  },
+  "compilers": {
+    "intel_llvm": "ifx / icx / icpx; MPI: mpiifx / mpiicx / mpiicpx",
+    "intel_classic": "ifort / icc / icpc (former commands)",
+    "nvidia": "nvc / nvc++ / nvfortran (NVIDIA HPC SDK)",
+    "amd": "clang / flang (AOCC)",
+    "gnu": "gcc / g++ / gfortran",
+    "gpu": "nvcc (CUDA Toolkit)",
+    "recommended_flags": "-xCORE-AVX512 for Intel on EPYC 9654 (Zen4 supports AVX512)"
+  },
+  "applications": ["ANSYS", "ANSYS/Fluent", "ANSYS/LS-DYNA", "ABAQUS", "Gaussian", "GaussView", "AMBER", "Materials Studio", "Discovery Studio", "Mathematica", "COMSOL", "Schrodinger", "MATLAB", "VASP", "Linaro Forge"],
+  "container_runtime": "Apptainer (Singularity). Build with 'apptainer build'; run with 'apptainer exec -B /gs -B /apps -B /home --nv <image>'.",
+  "storage": {
+    "home": "/home/<g>/<user> — 25 GiB quota, 2M inodes (Lustre, SSD). Check with 't4-user-info disk home'.",
+    "work": "/work/<g>/<user> — 100 GiB per user; path is $HOME with 'home' replaced by 'work' (${HOME/home/work}). No application needed.",
+    "high_speed_group": "/gs/fs — high-speed group disk (Lustre, SSD, 372 TB total); purchased per group.",
+    "large_scale_group": "/gs/bs — large-scale group disk (Lustre, HDD, 44.2 PB total); purchased per group. Check with 't4-user-info disk group -g <group>'.",
+    "apps": "/apps — common application deployment (read-only).",
+    "local_scratch": "/local — node-local xfs on NVMe SSD (1.62 TiB usable on node_f), exists only for the job's duration.",
+    "quota_command": "t4-user-info disk home | t4-user-info disk group -g <group>"
+  },
+  "accounting": {
+    "points": "t4-user-info group point -g <group> — shows deposit (rate) and balance (remaining TSUBAME points).",
+    "disk": "t4-user-info disk home ; t4-user-info disk group -g <group>",
+    "resource_limits": "https://www.t4.cii.isct.ac.jp/en/resource-limit"
+  },
+  "network": {
+    "sinet": "100 Gbps to the internet via SINET6 from the Suzukakedai campus.",
+    "campus_cifs": "Group disks (/gs/fs, /gs/bs) are reachable from on-campus Windows/Mac via CIFS as t4_fs / t4_bs."
+  },
+  "support": "https://www.t4.cii.isct.ac.jp/en/"
+}

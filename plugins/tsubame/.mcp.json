@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "tsubame-hpc": {
+      "command": "uv",
+      "args": [
+        "tool",
+        "run",
+        "--quiet",
+        "--from",
+        "git+https://github.com/TengxiangLii/Tsubame4-Agent.git@main#subdirectory=server",
+        "tsubame-hpc-mcp"
+      ],
+      "env": {}
+    },
+    "tsubame-docs": {
+      "command": "uv",
+      "args": [
+        "tool",
+        "run",
+        "--quiet",
+        "--from",
+        "git+https://github.com/TengxiangLii/Tsubame4-Agent.git@main#subdirectory=server",
+        "tsubame-docs-mcp"
+      ],
+      "env": {}
+    }
+  }
+}
