@@ -63,3 +63,10 @@ Settings live in `~/.tsubame/config.json`:
 - `group` is your TSUBAME group, billed in TSUBAME points via `qsub -g`. A JobSpec can override it per job; with no group set, jobs submit as free trial runs. `TSUBAME_GROUP` overrides the file.
 
 Documentation search ships as a BM25 keyword index and works fully offline — no configuration needed. Only if you have your own embedding endpoint should you add `embedding.base_url`, `embedding.model`, and `embedding.api_key` (via `TSUBAME_EMBED_API_KEY`) and rebuild the index; otherwise search stays on BM25 keyword matching over the same content.
+
+## Documentation
+
+New here? Two guides walk you through using the agent — no prior HPC or agent experience needed:
+
+- **[Quickstart](QUICKSTART.md)** — install, connect, and run your first (free) job in about 5 minutes.
+- **[User Guide](docs/USER_GUIDE.md)** — the full manual: how the agent workflow works, what you can do, worked examples, a prompt cheat-sheet, and troubleshooting.
