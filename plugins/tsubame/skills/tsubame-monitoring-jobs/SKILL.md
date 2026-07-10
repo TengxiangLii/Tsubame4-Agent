@@ -35,7 +35,7 @@ description: Use when the user asks about the status, progress, output, history,
      check the script and the cores-per-process pairing.
    - **Module problems** → GPU code without `module load cuda`, or a stale env
      under `-V`; ensure `module purge` precedes `module load`.
-3. The exact script that was submitted is kept in `~/.tsubame/jobs/` — `fs_view`
+3. The exact script that was submitted is kept in `~/agent/jobs/` — `fs_view`
    it when debugging.
 
 ## Live job inspection

@@ -53,7 +53,7 @@ Just tell the agent, in plain English:
 > **Set up my TSUBAME4 connection.**
 
 It will walk you through a short setup (which SSH host/alias to use, your TSUBAME
-*group* for billing) and write a small settings file at `~/.tsubame/config.json`
+*group* for billing) and write a small settings file at `~/.hpc-agent/tsubame.json`
 that looks like this:
 
 ```json

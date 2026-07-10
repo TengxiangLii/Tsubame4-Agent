@@ -60,13 +60,29 @@ async def hpc_checks(submit: bool) -> None:
             await call(session, "get_user_allocations")
             await call(session, "get_job_statuses", {"job_ids": []})
 
-            # filesystem utilities
-            await call(session, "fs_upload",
-                       {"path": "/tmp/tsubame-smoke.txt", "content": "smoke test\n"})
-            csum1 = await call(session, "fs_checksum", {"path": "/tmp/tsubame-smoke.txt"})
-            b64 = await call(session, "fs_download", {"path": "/tmp/tsubame-smoke.txt"})
-            import base64
-            assert base64.b64decode(b64.strip()).decode() == "smoke test\n", "download content mismatch"
+            # filesystem utilities — fs_upload/fs_download transfer via rsync
+            # (scp fallback) against a real local file, not inline content.
+            import hashlib
+            import tempfile
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                local_src = Path(tmpdir) / "tsubame-smoke.txt"
+                local_src.write_text("smoke test\n")
+                local_sha = hashlib.sha256(local_src.read_bytes()).hexdigest()
+
+                upload_result = await call(session, "fs_upload",
+                    {"path": "/tmp/tsubame-smoke.txt", "local_path": str(local_src)})
+                assert json.loads(upload_result)["verified"], "fs_upload sha256 mismatch"
+
+                csum1 = await call(session, "fs_checksum", {"path": "/tmp/tsubame-smoke.txt"})
+                assert csum1.split()[0] == local_sha, "fs_checksum doesn't match uploaded content"
+
+                local_dst = Path(tmpdir) / "tsubame-smoke-downloaded.txt"
+                download_result = await call(session, "fs_download",
+                    {"path": "/tmp/tsubame-smoke.txt", "local_path": str(local_dst)})
+                assert json.loads(download_result)["verified"], "fs_download sha256 mismatch"
+                assert local_dst.read_text() == "smoke test\n", "download content mismatch"
+
             await call(session, "fs_cp",
                        {"src": "/tmp/tsubame-smoke.txt", "dst": "/tmp/tsubame-smoke-copy.txt"})
             csum2 = await call(session, "fs_checksum", {"path": "/tmp/tsubame-smoke-copy.txt"})
@@ -96,8 +112,12 @@ async def hpc_checks(submit: bool) -> None:
             spec = {
                 "name": "tsubame-smoke",
                 "executable": "hostname && nvidia-smi -L && nproc",
-                "resources": {"resource_type": "node_f", "resource_count": 1},
-                "attributes": {"duration": "0:03:00", "account": ""},  # "" => free trial run
+                "resources": {"node_count": 1},
+                "attributes": {
+                    "duration": "0:03:00",
+                    "account": "",  # "" => free trial run
+                    "custom_attributes": {"resource_type": "node_f"},
+                },
             }
             out = await call(session, "submit_job", {"spec": spec})
             job_id = json.loads(out)["job_id"]
