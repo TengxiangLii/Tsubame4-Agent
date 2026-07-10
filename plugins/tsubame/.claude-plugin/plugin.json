@@ -1,7 +1,7 @@
 {
   "name": "tsubame",
   "description": "Interact with the Institute of Science Tokyo TSUBAME4.0 supercomputer: submit and monitor Grid Engine jobs, manage files on the cluster, and search the built-in TSUBAME4 guide.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "TengxiangLii",
     "email": "li.t.ab30@m.isct.ac.jp"
