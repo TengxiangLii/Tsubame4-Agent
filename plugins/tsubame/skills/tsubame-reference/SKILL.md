@@ -10,8 +10,9 @@ built-in guide, and prefer live state for anything that changes over time.
 
 ## Workflow
 
-1. `search_docs` (tsubame-docs server) with the user's question. Cite the
-   returned source in your answer.
+1. `search_docs` (tsubame-docs server) with the user's question. Results carry
+   no URL — this searches a guide bundled with the agent, not a live site —
+   don't invent or guess one to cite.
 2. If results look incomplete, `list_doc_sections` shows the full table of
    contents; `read_doc_section` reads a section in full by its breadcrumb.
 3. For anything current or precise — installed software, queue occupancy, your
@@ -47,6 +48,5 @@ built-in guide, and prefer live state for anything that changes over time.
 
 The docs index is built from `server/tsubame_mcp/data/tsubame_guide.md` (an
 original guide, not the vendor manual). To revise it, edit that file and rebuild:
-`python -m tsubame_mcp.rag.ingest --no-embed` (BM25 index; drop `--no-embed` only
-if an embedding endpoint is configured). Search uses BM25 keyword matching by
-default.
+`python -m tsubame_mcp.ingest --no-embed` (BM25 index). No embedding endpoint
+ships for TSUBAME4, so search always uses BM25 keyword matching.

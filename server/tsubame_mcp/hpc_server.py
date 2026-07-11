@@ -1,18 +1,25 @@
 """MCP server for TSUBAME4.0, modeled on the IRI Facility API.
 
-Tool groups mirror the IRI resource groups (facility, status, account, compute,
-filesystem); each operation is executed on a TSUBAME4 login node over SSH via
-remotemanager, since TSUBAME4 does not expose a REST facility API itself.
-Coverage of the full API is tracked in IRI_CHECKLIST.md at the repo root.
+Tool groups mirror the IRI resource groups (facility, status, account,
+compute, filesystem); each operation is executed on a TSUBAME4 login node
+over SSH via `hpc_agent_core.middleware`, since TSUBAME4 does not expose a
+REST facility API itself. Coverage of the full API is tracked in
+IRI_CHECKLIST.md at the repo root.
 """
 import shlex
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from tsubame_mcp import compute, config
-from tsubame_mcp.middleware import quote_path, run_command, write_remote_file
-from tsubame_mcp.models import CompressionType, Job, JobSpec
-from tsubame_mcp.serving import serve
+from hpc_agent_core.middleware import (
+    download_file,
+    quote_path,
+    run_command,
+    upload_file,
+)
+from hpc_agent_core.models import CompressionType, Job, JobSpec
+from hpc_agent_core.serving import serve
+from tsubame_mcp import compute, config  # noqa: F401 -- config registers settings via configure()
 
 mcp = FastMCP("tsubame-hpc")
 
@@ -32,7 +39,8 @@ def get_facility() -> dict:
 
     Static reference data (no SSH round-trip). TSUBAME4 is a GPU-first system:
     240 nodes, each with 2x AMD EPYC 9654 (192 cores) and 4x NVIDIA H100. Jobs
-    are sized by resource type (node_f, gpu_1, cpu_4, ...). (IRI: GET /facility)
+    are sized by resource type (node_f, gpu_1, cpu_4, ...) — see the
+    resource_types list. (IRI: GET /facility)
     """
     return config.load_cluster_config()
 
@@ -178,15 +186,21 @@ def get_user_allocations() -> list[dict]:
 def submit_job(spec: JobSpec, resource_id: str = RESOURCE_ID) -> dict:
     """Submit a job described by a JobSpec. (IRI: POST /compute/job/{resource_id})
 
-    The spec is rendered as a Grid Engine script (kept under ~/.tsubame/jobs/ on
+    The spec is rendered as a Grid Engine script (kept under ~/agent/jobs/ on
     the cluster for auditability) and submitted with qsub. Returns job_id, the
     script path, and the charged group. TSUBAME4 notes: size the job with
-    resources.resource_type (node_f full node with 4 GPUs is the default; gpu_1
-    for a single GPU; cpu_4..cpu_160 for CPU-only) and resource_count;
-    attributes.account is the TSUBAME group charged in points (falls back to the
-    configured default, or submits as a free trial run if none is set); load
-    software in pre_launch (e.g. 'module purge && module load cuda'); executable
-    may be a shell line and launcher an MPI prefix (mpirun/mpiexec.hydra).
+    attributes.custom_attributes["resource_type"] (node_f, a full node with 4
+    GPUs, is the default; gpu_1 for a single GPU; cpu_4..cpu_160 for CPU-only)
+    and resources.node_count as the unit count; attributes.account is the
+    TSUBAME group charged in points (falls back to the configured default, or
+    submits as a free trial run if none is set); load software in pre_launch
+    (e.g. 'module purge && module load cuda'); executable may be a shell line
+    and launcher an MPI prefix (mpirun/mpiexec.hydra). Other TSUBAME-specific
+    fields (priority, array, hold_jid, gpu_compute_mode) also go in
+    custom_attributes — see IRI_CHECKLIST.md for the full mapping.
+
+    Show the user the spec (or describe it) before submitting, unless they
+    asked to just run it.
     """
     _check_resource(resource_id)
     return compute.submit(spec)
@@ -196,10 +210,11 @@ def submit_job(spec: JobSpec, resource_id: str = RESOURCE_ID) -> dict:
 def get_job_status(job_id: str, resource_id: str = RESOURCE_ID) -> Job:
     """Get the normalized status of one job. (IRI: GET /compute/status/...)
 
-    state is the normalized IRI state (QUEUED/ACTIVE/COMPLETED/FAILED/CANCELED);
-    native_state is Grid Engine's (qstat code, or qacct for finished jobs). Job
-    stdout defaults to <name>.o<job_id> and stderr to <name>.e<job_id> in the
-    submit directory — read them with fs_tail or fs_view.
+    state is the normalized IRI state (queued/active/completed/failed/
+    canceled); meta_data.native_state is Grid Engine's (qstat code, or
+    "finished" for qacct-resolved jobs). Job stdout defaults to
+    <name>.o<job_id> and stderr to <name>.e<job_id> in the submit directory —
+    read them with fs_tail or fs_view.
     """
     _check_resource(resource_id)
     jobs = compute.get_statuses([job_id])
@@ -308,25 +323,15 @@ def fs_mkdir(path: str) -> str:
 
 
 @mcp.tool()
-def fs_upload(path: str, content: str, binary: bool = False) -> str:
-    """Write a file on the cluster, creating parent directories.
-    (IRI: POST /filesystem/upload — max 5 MB)
+def fs_upload(path: str, local_path: str) -> dict:
+    """Upload a local file to the cluster. (IRI: POST /filesystem/upload — deviation)
 
-    For text files pass the content directly (binary=False, the default).
-    For binary files pass the content as base64 and set binary=True; it will
-    be decoded before writing. Use fs_compress + fs_download for files over 5 MB.
+    Transfers local_path -> path on the cluster via rsync (scp fallback if
+    rsync < 3.0), creating remote parent directories. No size limit. Returns
+    {remote_path, bytes, sha256, verified, transport}. Deliberately diverges
+    from IRI's multipart shape — see IRI_CHECKLIST.md.
     """
-    import base64 as _b64
-    raw: str | bytes
-    if binary:
-        raw = _b64.b64decode(content)
-    else:
-        raw = content
-    size = len(raw) if isinstance(raw, bytes) else len(raw.encode())
-    if size > 5 * 1024 * 1024:
-        raise ValueError(f"Content is {size:,} bytes — exceeds 5 MB upload limit.")
-    abs_path = write_remote_file(path, raw)
-    return f"Wrote {size:,} bytes to {abs_path}"
+    return upload_file(Path(local_path), path)
 
 
 @mcp.tool()
@@ -336,21 +341,16 @@ def fs_checksum(path: str) -> str:
 
 
 @mcp.tool()
-def fs_download(path: str) -> str:
-    """Download a small file from the cluster as base64. (IRI: GET /filesystem/download)
+def fs_download(path: str, local_path: str | None = None) -> dict:
+    """Download a file from the cluster to local disk. (IRI: GET /filesystem/download — deviation)
 
-    Capped at 5 MB (matching IRI spec). Use fs_compress first for larger files,
-    then download the archive. The caller can base64-decode and write locally.
+    Transfers path -> local_path via rsync (scp fallback if rsync < 3.0). No
+    size limit. local_path defaults to the filename in the current working
+    directory. Returns {local_path, bytes, sha256, verified, transport}.
+    Deliberately diverges from IRI's base64-in-body shape — see IRI_CHECKLIST.md.
     """
-    size_out = run_command(f"stat -c %s {quote_path(path)}")
-    size = int(size_out.strip())
-    if size > 5 * 1024 * 1024:
-        raise ValueError(
-            f"File is {size:,} bytes — exceeds 5 MB limit. "
-            f"Compress it first with fs_compress, or transfer with: "
-            f"scp {config.ssh_host()}:{path} ."
-        )
-    return run_command(f"base64 {quote_path(path)}")
+    dest = Path(local_path) if local_path else Path.cwd() / Path(path).name
+    return download_file(path, dest)
 
 
 @mcp.tool()
@@ -476,8 +476,10 @@ def run_command_on_cluster(command: str) -> str:
     Use only when no dedicated tool fits, e.g. 'module avail' to list software,
     't4-user-info group point -g <group>' to check TSUBAME points, 'qstat' to
     see the queue, or 't4-user-info disk home' for quota. Runs under a login
-    shell from the home directory; returns stdout+stderr. Do not run heavy
-    computation on the login node — submit a job instead.
+    shell from the home directory; returns stdout+stderr. Before calling this,
+    show the user the exact command and a one-line explanation, then call it —
+    skip the preview only if the user explicitly asked to just run something.
+    Do not run heavy computation on the login node — submit a job instead.
     """
     return run_command(command)
 

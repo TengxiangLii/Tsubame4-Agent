@@ -315,7 +315,7 @@ work without spending points. (This is exactly what `/tsubame-demo` does.)
 ## 6. Troubleshooting & FAQ
 
 **"The agent says it's not configured."**
-Run setup: *"set up my TSUBAME connection."* It creates `~/.tsubame/config.json`
+Run setup: *"set up my TSUBAME connection."* It creates `~/.hpc-agent/tsubame.json`
 with your SSH host and group. You can check that file exists and is correct.
 
 **"Permission denied" or it's asking for a password.**
@@ -397,7 +397,7 @@ Maximum wall-clock time per job: **24 hours**. One resource type per job.
 
 ### Settings file
 
-`~/.tsubame/config.json`:
+`~/.hpc-agent/tsubame.json`:
 
 ```json
 {

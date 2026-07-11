@@ -42,8 +42,9 @@ This surfaces something genuinely TSUBAME4-specific: the resource-type model and
 the points budget that govern every submission — not something you can guess from
 generic HPC knowledge.
 
-Show the top result: the breadcrumb, a short excerpt, and the source. The result
-will note `[search_method: bm25]` — say: *"Running on BM25 keyword search, which
+Show the top result: the breadcrumb and a short excerpt — **no URL**, this
+searches a guide bundled with the agent, not a live site. The result will
+note `[search_method: bm25]` — say: *"Running on BM25 keyword search, which
 ships with the plugin and works fully offline."*
 
 ---
@@ -51,12 +52,16 @@ ships with the plugin and works fully offline."*
 ## Step 4 — Filesystem
 
 Call `fs_ls(".")` to list the user's home directory. Show it cleanly (names,
-sizes, dates). Then demonstrate the toolkit:
-1. `fs_upload("/tmp/tsubame-demo.txt", "hello from Tsubame4Agent\n")` — write a file
-2. `fs_checksum("/tmp/tsubame-demo.txt")` — show the SHA-256
-3. `fs_cp(...)` then `fs_checksum` on the copy — confirm the checksum matches
+sizes, dates). Then demonstrate the toolkit, staying under `~/agent/` (the
+same place job scripts already live — not scattered loose in `$HOME`):
+1. `fs_mkdir("agent/demo-tsubame")`
+2. `run_command_on_cluster("echo 'hello from Tsubame4Agent' > agent/demo-tsubame/hello.txt")` — write a small file directly
+3. `fs_checksum("agent/demo-tsubame/hello.txt")` — show the SHA-256
+4. `fs_cp("agent/demo-tsubame/hello.txt", "agent/demo-tsubame/hello-copy.txt")` then `fs_checksum` on the copy — confirm the checksum matches
 
-Present this as: *"Upload, checksum, copy — the filesystem toolkit."*
+Present this as: *"Create, write, checksum, copy — the filesystem toolkit."*
+(For transferring a real local file, `fs_upload`/`fs_download` use rsync —
+see the submitting-jobs skill.)
 
 ---
 
@@ -81,8 +86,12 @@ Submit via `submit_job` with this spec:
 {
   "name": "tsubame-demo",
   "executable": "hostname && echo '---' && nvidia-smi -L && echo '---' && nproc",
-  "resources": {"resource_type": "node_f", "resource_count": 1},
-  "attributes": {"duration": "0:03:00", "account": ""}
+  "resources": {"node_count": 1},
+  "attributes": {
+    "duration": "0:03:00",
+    "account": "",
+    "custom_attributes": {"resource_type": "node_f"}
+  }
 }
 ```
 
@@ -109,7 +118,7 @@ that matches what `get_facility` reported.
 Summarize in 5 bullets:
 - Facility and live cluster status checked
 - Documentation searched (resource types + points)
-- Filesystem explored with upload, checksum, and copy
+- Filesystem explored with create, checksum, and copy
 - A free trial-run job submitted, ran, and its output (4× H100 node) retrieved
 - Everything went through one SSH layer to a TSUBAME4 login node
 
