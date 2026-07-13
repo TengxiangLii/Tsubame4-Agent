@@ -26,10 +26,11 @@ every hpc-agent-core plugin):
 }
 ```
 
-- `ssh.host` is a `~/.ssh/config` alias or `user@hostname` (key-based auth
+- `ssh.host` is a `~/.ssh/config` alias, `user@hostname` (key-based auth
   required; register your key on the
-  [TSUBAME Portal](https://www.t4.cii.isct.ac.jp/en/)).
-  `login.t4.gsic.titech.ac.jp` round-robins across the login nodes.
+  [TSUBAME Portal](https://www.t4.cii.isct.ac.jp/en/)), or `"localhost"` if
+  the agent is running directly on a TSUBAME4 login node (no SSH needed at
+  all). `login.t4.gsic.titech.ac.jp` round-robins across the login nodes.
   `TSUBAME_HOST` overrides the file. A legacy `~/.tsubame/config.json` is still
   read if it's the only config present.
 - `group` is your TSUBAME group, billed in TSUBAME points via `qsub -g`. A

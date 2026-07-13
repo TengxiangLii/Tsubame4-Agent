@@ -34,6 +34,9 @@ what's missing or being changed.
      ```
      (`login.t4.gsic.titech.ac.jp` round-robins to login1/login2.)
    - Otherwise username + hostname → `"host": "ux00000@login.t4.gsic.titech.ac.jp"`.
+   - Running the agent session directly on a TSUBAME4 login node itself (not
+     a personal laptop)? Use `"host": "localhost"` instead — no SSH key
+     needed, and skip the verification step below (nothing to probe).
    - Verify with: `ssh -o BatchMode=yes <host> 'echo ok'` (BatchMode matters —
      the MCP server cannot answer password prompts; key-based auth is required.
      Public keys are registered on the TSUBAME Portal:
@@ -61,8 +64,8 @@ what's missing or being changed.
 
 ## Notes
 
-- Settings are read per-call, so a group change applies immediately; an SSH host
-  change needs the tsubame-hpc server restarted (reconnect MCP servers or restart
-  the client).
+- Settings are read per-call, so a group or SSH host change (including
+  switching `ssh.host` to/from `"localhost"`) applies immediately — no
+  server restart needed.
 - Key-based SSH only — register the public key on the TSUBAME Portal first. Do not
   run heavy work on the login nodes.
